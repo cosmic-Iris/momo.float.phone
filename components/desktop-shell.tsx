@@ -1860,9 +1860,30 @@ export function DesktopShell({ initialThemeProfile, initialThemeAssets }: Deskto
   useEffect(() => {
     if (!activeApp) {
       setMascotContext({ page: "desktop", mode: "idle", label: "桌面", fields: {} });
+      // 如果是通过 UI 按钮返回桌面，清理掉之前推入的防退记录
+      if (window.history.state?.floatAppOpen) {
+        window.history.back();
+      }
+    } else {
+      // 打开应用时，推入一条历史记录，充当侧滑返回的“消耗品”
+      if (!window.history.state?.floatAppOpen) {
+        window.history.pushState({ floatAppOpen: true }, "");
+      }
     }
     // Specific pages update their own precise context via notifyMascotPageContext
   }, [activeApp]);
+
+  // 拦截系统侧滑返回/物理返回键
+  useEffect(() => {
+    const handlePopState = () => {
+      // 当系统后退触发时，如果当前有打开的应用，则关闭它（相当于拦截了退出网页的动作）
+      if (activeAppRef.current) {
+        setActiveApp(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Listen for AI-initiated call triggers globally (incoming call bar)
   useEffect(() => {
